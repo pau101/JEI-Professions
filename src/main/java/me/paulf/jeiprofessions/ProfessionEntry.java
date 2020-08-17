@@ -28,6 +28,10 @@ public final class ProfessionEntry {
         this.inputs = inputs;
     }
 
+    public VillagerProfession get() {
+        return this.profession;
+    }
+
     public String getName() {
         return I18n.format(this.nameKey);
     }
