@@ -38,7 +38,7 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
     private final IDrawable icon;
 
     public VillagerProfessionCategory(final IGuiHelper helper) {
-        this.background = helper.createDrawable(GUI, 0, 0, 84, 53);
+        this.background = helper.createDrawable(GUI, 0, 0, 84, 51);
         this.icon = helper.createDrawableIngredient(new ItemStack(Items.BELL));
     }
 
@@ -74,7 +74,7 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
 
     @Override
     public void setRecipe(final IRecipeLayout layout, final ProfessionEntry profession, final IIngredients ingredients) {
-        layout.getItemStacks().init(0, true, 0, 24);
+        layout.getItemStacks().init(0, true, 0, 22);
         layout.getItemStacks().set(ingredients);
     }
 
@@ -96,8 +96,8 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
     public void draw(final ProfessionEntry profession, final double mouseX, final double mouseY) {
         final Minecraft minecraft = Minecraft.getInstance();
         final int nameX = (this.background.getWidth() - minecraft.fontRenderer.getStringWidth(profession.getName())) / 2;
-        minecraft.fontRenderer.drawString(profession.getName(), nameX, 2.0F, 0xFF808080);
-        drawEntity(70, 49, 16, this.cache.getUnchecked(profession));
+        minecraft.fontRenderer.drawString(profession.getName(), nameX, 0, 0xFF808080);
+        drawEntity(70, 48, 16, this.cache.getUnchecked(profession));
     }
 
     public static void drawEntity(final int posX, final int posY, final int scale, final LivingEntity living) {
