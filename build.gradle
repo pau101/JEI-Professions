@@ -1,0 +1,75 @@
+buildscript {
+    repositories {
+        maven {
+            url "http://files.minecraftforge.net/maven"
+        }
+        jcenter()
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: "net.minecraftforge.gradle", name: "ForgeGradle", version: "3.+", changing: true
+    }
+}
+
+apply plugin: "net.minecraftforge.gradle"
+
+version = "1.0.0"
+group = "me.paulf.jeiprofessions"
+archivesBaseName = "jei-professions"
+sourceCompatibility = targetCompatibility = JavaVersion.VERSION_1_8
+
+minecraft {
+    mappings channel: "snapshot", version: "20200514-1.15.1"
+    runs {
+        client {
+            workingDirectory project.file("run")
+            property "forge.logging.console.level", "debug"
+            mods {
+                jeiprofessions {
+                    source sourceSets.main
+                }
+            }
+        }
+        server {
+            workingDirectory project.file("run")
+            property "forge.logging.console.level", "debug"
+            mods {
+                jeiprofessions {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+jar {
+    classifier "1.15.2"
+}
+
+repositories {
+    maven {
+        name "Progwml6 maven"
+        url "https://dvs1.progwml6.com/files/maven/"
+    }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:1.15.2-31.2.0"
+    compileOnly fg.deobf("mezz.jei:jei-1.15.2:6.0.0.4:api")
+    runtimeOnly fg.deobf("mezz.jei:jei-1.15.2:6.0.0.4")
+}
+
+processResources {
+    def vars = [
+        "version": project.version
+    ]
+    inputs.properties(vars)
+    from (sourceSets.main.resources.srcDirs) {
+        include("META-INF/mods.toml")
+        expand(vars)
+    }
+    from (sourceSets.main.resources.srcDirs) {
+        exclude("META-INF/mods.toml")
+        exclude("**/*.xcf")
+    }
+}
