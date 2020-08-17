@@ -6,24 +6,13 @@ import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.ingredients.IIngredients;
 import mezz.jei.api.recipe.category.IRecipeCategory;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.I18n;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.merchant.villager.VillagerProfession;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.village.PointOfInterestType;
-import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 
-import java.util.Collections;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-public class VillagerProfessionCategory implements IRecipeCategory<VillagerProfession> {
+public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEntry> {
     public static final ResourceLocation UID = new ResourceLocation("villager_professions");
 
     private final IDrawable background;
@@ -41,8 +30,8 @@ public class VillagerProfessionCategory implements IRecipeCategory<VillagerProfe
     }
 
     @Override
-    public Class<? extends VillagerProfession> getRecipeClass() {
-        return VillagerProfession.class;
+    public Class<? extends ProfessionEntry> getRecipeClass() {
+        return ProfessionEntry.class;
     }
 
     @Override
@@ -61,32 +50,19 @@ public class VillagerProfessionCategory implements IRecipeCategory<VillagerProfe
     }
 
     @Override
-    public void setIngredients(final VillagerProfession profession, final IIngredients ingredients) {
-        ingredients.setInputLists(
-            VanillaTypes.ITEM,
-            Collections.singletonList(getBlockStates(profession.getPointOfInterest()).stream()
-                .map(BlockState::getBlock)
-                .distinct()
-                .map(ItemStack::new)
-                .collect(Collectors.toList()))
-        );
-    }
-
-    private static Set<BlockState> getBlockStates(final PointOfInterestType poi) {
-        return ObfuscationReflectionHelper.getPrivateValue(PointOfInterestType.class, poi, "field_221075_w");
+    public void setIngredients(final ProfessionEntry profession, final IIngredients ingredients) {
+        ingredients.setInputLists(VanillaTypes.ITEM, profession.getInputs());
     }
 
     @Override
-    public void setRecipe(final IRecipeLayout layout, final VillagerProfession profession, final IIngredients ingredients) {
+    public void setRecipe(final IRecipeLayout layout, final ProfessionEntry profession, final IIngredients ingredients) {
         layout.getItemStacks().init(0, true, 0, 0);
         layout.getItemStacks().set(ingredients);
     }
 
     @Override
-    public void draw(final VillagerProfession profession, final double mouseX, final double mouseY) {
+    public void draw(final ProfessionEntry profession, final double mouseX, final double mouseY) {
         final Minecraft minecraft = Minecraft.getInstance();
-        // copypaste from VillagerEntity#getProfessionName
-        final ResourceLocation name = Objects.requireNonNull(profession.getRegistryName(), "profession name");
-        minecraft.fontRenderer.drawString(I18n.format(EntityType.VILLAGER.getTranslationKey() + '.' + (!"minecraft".equals(name.getNamespace()) ? name.getNamespace() + '.' : "") + name.getPath()), 21.0F, 5.0F, 0xFF808080);
+        minecraft.fontRenderer.drawString(profession.getName(), 21.0F, 5.0F, 0xFF808080);
     }
 }

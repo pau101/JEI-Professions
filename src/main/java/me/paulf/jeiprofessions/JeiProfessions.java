@@ -4,7 +4,6 @@ import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
-import net.minecraft.entity.merchant.villager.VillagerProfession;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -32,7 +31,8 @@ public final class JeiProfessions {
         public void registerRecipes(final IRecipeRegistration registration) {
             registration.addRecipes(
                 StreamSupport.stream(ForgeRegistries.PROFESSIONS.spliterator(), false)
-                    .filter(p -> p != VillagerProfession.NONE)
+                    .map(ProfessionEntry::of)
+                    .filter(ProfessionEntry::hasJobSites)
                     .collect(Collectors.toList()),
                 VillagerProfessionCategory.UID
             );
