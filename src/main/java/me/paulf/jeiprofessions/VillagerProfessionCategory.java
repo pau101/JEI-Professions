@@ -110,7 +110,7 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         stack.rotate(Vector3f.ZP.rotationDegrees(180.0F));
         living.rotationYaw = 180.0F + Util.milliTime() / 20.0F;
         living.renderYawOffset = living.rotationYaw;
-        living.rotationPitch = 0.0F;
+        living.rotationPitch = -5.0F;
         living.rotationYawHead = living.rotationYaw;
         living.prevRotationYawHead = living.rotationYaw;
         final EntityRendererManager renderer = Minecraft.getInstance().getRenderManager();
