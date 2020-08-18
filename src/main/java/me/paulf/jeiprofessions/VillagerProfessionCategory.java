@@ -107,7 +107,7 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         stack.translate(0.0D, 0.0D, 1000.0D);
         stack.scale(scale, scale, scale);
         stack.rotate(Vector3f.ZP.rotationDegrees(180.0F));
-        living.rotationYaw = 180.0F + Util.milliTime() / 20.0F;
+        living.rotationYaw = 180.0F - Util.milliTime() / 20.0F;
         living.renderYawOffset = living.rotationYaw;
         living.rotationPitch = -5.0F;
         living.rotationYawHead = living.rotationYaw;
