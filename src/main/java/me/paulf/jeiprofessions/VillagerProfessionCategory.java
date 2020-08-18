@@ -1,8 +1,6 @@
 package me.paulf.jeiprofessions;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import com.google.common.cache.*;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 import mezz.jei.api.constants.VanillaTypes;
@@ -81,6 +79,7 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
     private final LoadingCache<ProfessionEntry, VillagerEntity> cache = CacheBuilder.newBuilder()
         .maximumSize(128L)
         .expireAfterAccess(2L, TimeUnit.MINUTES)
+        .removalListener((RemovalListener<ProfessionEntry, VillagerEntity>) notification -> notification.getValue().remove(false))
         .build(CacheLoader.from(p -> {
             if (p == null) throw new NullPointerException("profession");
             final Minecraft minecraft = Minecraft.getInstance();
