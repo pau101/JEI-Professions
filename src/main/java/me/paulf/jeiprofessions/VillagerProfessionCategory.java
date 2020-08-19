@@ -133,7 +133,7 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
     static class CachedVillager {
         final VillagerEntity entity;
         final long creationTime;
-        long soundTime = Long.MIN_VALUE;
+        long soundTime;
 
         CachedVillager(final VillagerEntity entity, final long creationTime) {
             this.entity = entity;
@@ -143,7 +143,7 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         void tick(final long now) {
             if (now - this.creationTime > 1000) {
                 final long t = now / 50;
-                if (this.soundTime == Long.MIN_VALUE) {
+                if (this.soundTime == 0) {
                     this.soundTime = t;
                 }
                 final Random rng = this.entity.getRNG();
