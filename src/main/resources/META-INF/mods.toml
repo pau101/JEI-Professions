@@ -20,3 +20,9 @@ issueTrackerURL="https://github.com/pau101/JEI-Professions/issues"
     versionRange="[1.15.2]"
     ordering="NONE"
     side="BOTH"
+[[dependencies.jeiprofessions]]
+    modId="jei"
+    mandatory=true
+    versionRange="[6,)"
+    ordering="AFTER"
+    side="BOTH"
