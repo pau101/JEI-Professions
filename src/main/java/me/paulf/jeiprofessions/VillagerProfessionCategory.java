@@ -104,7 +104,7 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         minecraft.fontRenderer.drawString(profession.getName(), nameX, 0, 0xFF808080);
         final CachedVillager villager = this.cache.getUnchecked(profession);
         drawEntity(70, 48, 16, villager.entity);
-        villager.tick(Util.milliTime());
+        villager.tick();
     }
 
     public static void drawEntity(final int posX, final int posY, final int scale, final LivingEntity living) {
@@ -140,8 +140,9 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
             this.creationTime = creationTime;
         }
 
-        void tick(final long now) {
-            if (now - this.creationTime > 1000) {
+        void tick() {
+            final long now = Util.milliTime();
+            if (now - this.creationTime > 600000) {
                 final long t = now / 50;
                 if (this.soundTime == 0) {
                     this.soundTime = t;
