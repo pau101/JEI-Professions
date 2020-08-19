@@ -1,6 +1,9 @@
 package me.paulf.jeiprofessions;
 
-import com.google.common.cache.*;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.cache.RemovalListener;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 import mezz.jei.api.constants.VanillaTypes;
@@ -10,6 +13,7 @@ import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.ingredients.IIngredients;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.audio.SimpleSound;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.Quaternion;
 import net.minecraft.client.renderer.Vector3f;
@@ -22,8 +26,10 @@ import net.minecraft.entity.merchant.villager.VillagerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundEvents;
 import net.minecraft.util.Util;
 
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEntry> {
@@ -76,10 +82,10 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         layout.getItemStacks().set(ingredients);
     }
 
-    private final LoadingCache<ProfessionEntry, VillagerEntity> cache = CacheBuilder.newBuilder()
+    private final LoadingCache<ProfessionEntry, CachedVillager> cache = CacheBuilder.newBuilder()
         .maximumSize(128L)
         .expireAfterAccess(2L, TimeUnit.MINUTES)
-        .removalListener((RemovalListener<ProfessionEntry, VillagerEntity>) notification -> notification.getValue().remove(false))
+        .removalListener((RemovalListener<ProfessionEntry, CachedVillager>) notification -> notification.getValue().entity.remove(false))
         .build(CacheLoader.from(p -> {
             if (p == null) throw new NullPointerException("profession");
             final Minecraft minecraft = Minecraft.getInstance();
@@ -88,7 +94,7 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
             final VillagerEntity villager = EntityType.VILLAGER.create(world);
             if (villager == null) throw new NullPointerException("villager");
             villager.setVillagerData(villager.getVillagerData().withProfession(p.get()));
-            return villager;
+            return new CachedVillager(villager, Util.milliTime());
         }));
 
     @Override
@@ -96,7 +102,9 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         final Minecraft minecraft = Minecraft.getInstance();
         final int nameX = (this.background.getWidth() - minecraft.fontRenderer.getStringWidth(profession.getName())) / 2;
         minecraft.fontRenderer.drawString(profession.getName(), nameX, 0, 0xFF808080);
-        drawEntity(70, 48, 16, this.cache.getUnchecked(profession));
+        final CachedVillager villager = this.cache.getUnchecked(profession);
+        drawEntity(70, 48, 16, villager.entity);
+        villager.tick(Util.milliTime());
     }
 
     public static void drawEntity(final int posX, final int posY, final int scale, final LivingEntity living) {
@@ -120,5 +128,30 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         buf.finish();
         renderer.setRenderShadow(true);
         RenderSystem.popMatrix();
+    }
+
+    static class CachedVillager {
+        final VillagerEntity entity;
+        final long creationTime;
+        long soundTime = Long.MIN_VALUE;
+
+        CachedVillager(final VillagerEntity entity, final long creationTime) {
+            this.entity = entity;
+            this.creationTime = creationTime;
+        }
+
+        void tick(final long now) {
+            if (now - this.creationTime > 1000) {
+                final long t = now / 50;
+                if (this.soundTime == Long.MIN_VALUE) {
+                    this.soundTime = t;
+                }
+                final Random rng = this.entity.getRNG();
+                if (rng.nextInt(1000) < t - this.soundTime) {
+                    this.soundTime = t + 80;
+                    Minecraft.getInstance().getSoundHandler().play(SimpleSound.master(SoundEvents.ENTITY_VILLAGER_AMBIENT, (rng.nextFloat() - rng.nextFloat()) * 0.2F + 1.0F, 1.0F));
+                }
+            }
+        }
     }
 }
