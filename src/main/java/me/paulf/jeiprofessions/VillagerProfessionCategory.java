@@ -1,5 +1,6 @@
 package me.paulf.jeiprofessions;
 
+import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -28,11 +29,20 @@ import net.minecraft.item.Items;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.Util;
+import net.minecraft.util.text.TextFormatting;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEntry> {
+    private static final Logger LOGGER = LogManager.getLogger();
+
     public static final ResourceLocation UID = new ResourceLocation("villager_professions");
 
     private static final ResourceLocation GUI = new ResourceLocation(JeiProfessions.ID, "textures/gui/profession.png");
@@ -85,16 +95,22 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
     private final LoadingCache<ProfessionEntry, CachedVillager> cache = CacheBuilder.newBuilder()
         .maximumSize(128L)
         .expireAfterAccess(2L, TimeUnit.MINUTES)
-        .removalListener((RemovalListener<ProfessionEntry, CachedVillager>) notification -> notification.getValue().entity.remove(false))
+        .removalListener((RemovalListener<ProfessionEntry, CachedVillager>) notification -> notification.getValue().remove())
         .build(CacheLoader.from(p -> {
-            if (p == null) throw new NullPointerException("profession");
-            final Minecraft minecraft = Minecraft.getInstance();
-            final ClientWorld world = minecraft.world;
-            if (world == null) throw new NullPointerException("world");
-            final VillagerEntity villager = EntityType.VILLAGER.create(world);
-            if (villager == null) throw new NullPointerException("villager");
-            villager.setVillagerData(villager.getVillagerData().withProfession(p.get()));
-            return new CachedVillager(villager, Util.milliTime());
+            try {
+                if (p == null) throw new NullPointerException("profession");
+                final Minecraft minecraft = Minecraft.getInstance();
+                final ClientWorld world = minecraft.world;
+                if (world == null) throw new NullPointerException("world");
+                final VillagerEntity villager = EntityType.VILLAGER.create(world);
+                if (villager == null) throw new NullPointerException("villager");
+                villager.setVillagerData(villager.getVillagerData().withProfession(p.get()));
+                return new CachedState(new CachedVillagerEntity(villager, Util.milliTime()));
+            } catch (final Throwable t) {
+                Throwables.throwIfInstanceOf(t, Error.class);
+                LOGGER.warn("Error creating render villager", t);
+                return new CachedVillagerError(t);
+            }
         }));
 
     @Override
@@ -102,9 +118,29 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         final Minecraft minecraft = Minecraft.getInstance();
         final int nameX = (this.background.getWidth() - minecraft.fontRenderer.getStringWidth(profession.getName())) / 2;
         minecraft.fontRenderer.drawString(profession.getName(), nameX, 0, 0xFF808080);
-        final CachedVillager villager = this.cache.getUnchecked(profession);
-        drawEntity(70, 48, 16, villager.entity);
-        villager.tick();
+        this.cache.getUnchecked(profession).render();
+    }
+
+    @Override
+    public List<String> getTooltipStrings(final ProfessionEntry profession, final double mouseX, final double mouseY) {
+        if (this.isOverEntity(mouseX, mouseY)) {
+            final List<String> tooltip = new ArrayList<>();
+            this.cache.getUnchecked(profession).tooltip(tooltip);
+            return tooltip;
+        }
+        return Collections.emptyList();
+    }
+
+    @Override
+    public boolean handleClick(final ProfessionEntry profession, final double mouseX, final double mouseY, final int mouseButton) {
+        if (mouseButton == GLFW.GLFW_MOUSE_BUTTON_1 && this.isOverEntity(mouseX, mouseY)) {
+            this.cache.getUnchecked(profession).press();
+        }
+        return false;
+    }
+
+    private boolean isOverEntity(final double mouseX, final double mouseY) {
+        return mouseX >= 57.0D && mouseX < 83.0D && mouseY >= 12.0D && mouseY < 50.0D;
     }
 
     public static void drawEntity(final int posX, final int posY, final int scale, final LivingEntity living) {
@@ -124,23 +160,72 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         renderer.setCameraOrientation(Quaternion.ONE);
         renderer.setRenderShadow(false);
         final IRenderTypeBuffer.Impl buf = Minecraft.getInstance().getRenderTypeBuffers().getBufferSource();
-        renderer.renderEntityStatic(living, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, stack, buf, 0xF000F0);
-        buf.finish();
-        renderer.setRenderShadow(true);
-        RenderSystem.popMatrix();
+        try {
+            renderer.renderEntityStatic(living, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, stack, buf, 0xF000F0);
+        } finally {
+            buf.finish();
+            renderer.setRenderShadow(true);
+            RenderSystem.popMatrix();
+        }
     }
 
-    static class CachedVillager {
+    interface CachedVillager {
+        void render();
+
+        void remove();
+
+        void tooltip(final List<String> lines);
+
+        void press();
+    }
+
+    static class CachedState implements CachedVillager {
+        CachedVillager state;
+
+        CachedState(final CachedVillager state) {
+            this.state = state;
+        }
+
+        @Override
+        public void render() {
+            try {
+                this.state.render();
+            } catch (final Throwable t) {
+                Throwables.throwIfInstanceOf(t, Error.class);
+                LOGGER.warn("Error rendering", t);
+                this.state = new CachedVillagerError(t);
+            }
+        }
+
+        @Override
+        public void remove() {
+            this.state.remove();
+        }
+
+        @Override
+        public void tooltip(final List<String> lines) {
+            this.state.tooltip(lines);
+        }
+
+        @Override
+        public void press() {
+            this.state.press();
+        }
+    }
+
+    static class CachedVillagerEntity implements CachedVillager {
         final VillagerEntity entity;
         final long creationTime;
         long soundTime;
 
-        CachedVillager(final VillagerEntity entity, final long creationTime) {
+        CachedVillagerEntity(final VillagerEntity entity, final long creationTime) {
             this.entity = entity;
             this.creationTime = creationTime;
         }
 
-        void tick() {
+        @Override
+        public void render() {
+            drawEntity(70, 48, 16, this.entity);
             final long now = Util.milliTime();
             if (now - this.creationTime > 600000) {
                 final long t = now / 50;
@@ -153,6 +238,47 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
                     Minecraft.getInstance().getSoundHandler().play(SimpleSound.master(SoundEvents.ENTITY_VILLAGER_AMBIENT, (rng.nextFloat() - rng.nextFloat()) * 0.2F + 1.0F, 1.0F));
                 }
             }
+        }
+
+        @Override
+        public void remove() {
+            this.entity.remove(false);
+        }
+
+        @Override
+        public void tooltip(final List<String> lines) {
+            lines.add(this.entity.getDisplayName().getFormattedText());
+        }
+
+        @Override
+        public void press() {
+        }
+    }
+
+    static class CachedVillagerError implements CachedVillager {
+        final Throwable error;
+
+        CachedVillagerError(final Throwable error) {
+            this.error = error;
+        }
+
+        @Override
+        public void render() {
+            Minecraft.getInstance().fontRenderer.drawString(TextFormatting.BOLD + ":(", 66, 27, 0xFFA04040);
+        }
+
+        @Override
+        public void remove() {
+        }
+
+        @Override
+        public void tooltip(final List<String> lines) {
+            lines.add("" + TextFormatting.RED + TextFormatting.BOLD + I18n.format("jeiprofessions.error"));
+            lines.add("" + TextFormatting.GRAY + TextFormatting.ITALIC + I18n.format("jeiprofessions.log"));
+        }
+
+        @Override
+        public void press() {
         }
     }
 }
