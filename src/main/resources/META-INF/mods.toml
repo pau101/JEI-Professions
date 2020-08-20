@@ -7,7 +7,7 @@ issueTrackerURL="https://github.com/pau101/JEI-Professions/issues"
     displayName="JEI Professions"
     displayURL="https://www.curseforge.com/minecraft/mc-mods/jei-professions"
     authors="pau101"
-    description="A JEI plugin for viewing villager professions"
+    description="A JEI plugin for viewing villager profession job sites"
 [[dependencies.jeiprofessions]]
     modId="forge"
     mandatory=true
