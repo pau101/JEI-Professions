@@ -16,8 +16,6 @@ import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.SimpleSound;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.Quaternion;
-import net.minecraft.client.renderer.Vector3f;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.world.ClientWorld;
@@ -29,7 +27,13 @@ import net.minecraft.item.Items;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.Util;
+import net.minecraft.util.math.vector.Matrix4f;
+import net.minecraft.util.math.vector.Quaternion;
+import net.minecraft.util.math.vector.Vector3f;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TextFormatting;
+import net.minecraft.util.text.TranslationTextComponent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.lwjgl.glfw.GLFW;
@@ -114,17 +118,17 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         }));
 
     @Override
-    public void draw(final ProfessionEntry profession, final double mouseX, final double mouseY) {
+    public void draw(ProfessionEntry profession, MatrixStack stack, double mouseX, double mouseY) {
         final Minecraft minecraft = Minecraft.getInstance();
         final int nameX = (this.background.getWidth() - minecraft.fontRenderer.getStringWidth(profession.getName())) / 2;
-        minecraft.fontRenderer.drawString(profession.getName(), nameX, 0, 0xFF808080);
-        this.cache.getUnchecked(profession).render();
+        minecraft.fontRenderer.drawString(stack, profession.getName(), nameX, 0, 0xFF808080);
+        this.cache.getUnchecked(profession).render(stack);
     }
 
     @Override
-    public List<String> getTooltipStrings(final ProfessionEntry profession, final double mouseX, final double mouseY) {
+    public List<ITextComponent> getTooltipStrings(final ProfessionEntry profession, final double mouseX, final double mouseY) {
         if (this.isOverEntity(mouseX, mouseY)) {
-            final List<String> tooltip = new ArrayList<>();
+            final List<ITextComponent> tooltip = new ArrayList<>();
             this.cache.getUnchecked(profession).tooltip(tooltip);
             return tooltip;
         }
@@ -143,11 +147,10 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         return mouseX >= 57.0D && mouseX < 83.0D && mouseY >= 12.0D && mouseY < 50.0D;
     }
 
-    public static void drawEntity(final int posX, final int posY, final int scale, final LivingEntity living) {
-        RenderSystem.pushMatrix();
-        RenderSystem.translatef(posX, posY, 1050.0F);
-        RenderSystem.scalef(1.0F, 1.0F, -1.0F);
-        final MatrixStack stack = new MatrixStack();
+    public static void drawEntity(final MatrixStack stack, final int posX, final int posY, final int scale, final LivingEntity living) {
+        stack.push();
+        stack.translate(posX, posY, 1050.0D);
+        stack.getLast().getMatrix().mul(Matrix4f.makeScale(1.0F, 1.0F, -1.0F));
         stack.translate(0.0D, 0.0D, 1000.0D);
         stack.scale(scale, scale, scale);
         stack.rotate(Vector3f.ZP.rotationDegrees(180.0F));
@@ -161,20 +164,20 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         renderer.setRenderShadow(false);
         final IRenderTypeBuffer.Impl buf = Minecraft.getInstance().getRenderTypeBuffers().getBufferSource();
         try {
-            renderer.renderEntityStatic(living, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, stack, buf, 0xF000F0);
+            RenderSystem.runAsFancy(() -> renderer.renderEntityStatic(living, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, stack, buf, 0xF000F0));
         } finally {
             buf.finish();
             renderer.setRenderShadow(true);
-            RenderSystem.popMatrix();
+            stack.pop();
         }
     }
 
     interface CachedVillager {
-        void render();
+        void render(final MatrixStack stack);
 
         void remove();
 
-        void tooltip(final List<String> lines);
+        void tooltip(final List<ITextComponent> lines);
 
         void press();
     }
@@ -187,9 +190,9 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         }
 
         @Override
-        public void render() {
+        public void render(final MatrixStack stack) {
             try {
-                this.state.render();
+                this.state.render(stack);
             } catch (final Throwable t) {
                 Throwables.throwIfInstanceOf(t, Error.class);
                 LOGGER.warn("Error rendering", t);
@@ -203,7 +206,7 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         }
 
         @Override
-        public void tooltip(final List<String> lines) {
+        public void tooltip(final List<ITextComponent> lines) {
             this.state.tooltip(lines);
         }
 
@@ -224,8 +227,8 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         }
 
         @Override
-        public void render() {
-            drawEntity(70, 48, 16, this.entity);
+        public void render(final MatrixStack stack) {
+            drawEntity(stack, 70, 48, 16, this.entity);
             final long now = Util.milliTime();
             if (now - this.creationTime > 600000) {
                 final long t = now / 50;
@@ -246,8 +249,8 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         }
 
         @Override
-        public void tooltip(final List<String> lines) {
-            lines.add(this.entity.getDisplayName().getFormattedText());
+        public void tooltip(final List<ITextComponent> lines) {
+            lines.add(this.entity.getDisplayName());
         }
 
         @Override
@@ -263,8 +266,8 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         }
 
         @Override
-        public void render() {
-            Minecraft.getInstance().fontRenderer.drawString(TextFormatting.BOLD + ":(", 66, 27, 0xFFA04040);
+        public void render(final MatrixStack stack) {
+            Minecraft.getInstance().fontRenderer.func_243246_a(stack, new StringTextComponent(":(").mergeStyle(TextFormatting.BOLD), 66, 27, 0xFFA04040);
         }
 
         @Override
@@ -272,9 +275,9 @@ public class VillagerProfessionCategory implements IRecipeCategory<ProfessionEnt
         }
 
         @Override
-        public void tooltip(final List<String> lines) {
-            lines.add("" + TextFormatting.RED + TextFormatting.BOLD + I18n.format("jeiprofessions.error"));
-            lines.add("" + TextFormatting.GRAY + TextFormatting.ITALIC + I18n.format("jeiprofessions.log"));
+        public void tooltip(final List<ITextComponent> lines) {
+            lines.add(new TranslationTextComponent("jeiprofessions.error").mergeStyle(TextFormatting.RED, TextFormatting.BOLD));
+            lines.add(new TranslationTextComponent("jeiprofessions.log").mergeStyle(TextFormatting.GRAY, TextFormatting.ITALIC));
         }
 
         @Override

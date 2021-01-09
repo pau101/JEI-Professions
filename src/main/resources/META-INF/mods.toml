@@ -1,6 +1,7 @@
 modLoader="javafml"
-loaderVersion="[31,)"
+loaderVersion="[34,)"
 issueTrackerURL="https://github.com/pau101/JEI-Professions/issues"
+license="MIT"
 [[mods]]
     modId="jeiprofessions"
     version="${version}"
@@ -11,18 +12,18 @@ issueTrackerURL="https://github.com/pau101/JEI-Professions/issues"
 [[dependencies.jeiprofessions]]
     modId="forge"
     mandatory=true
-    versionRange="[31,)"
+    versionRange="[34,)"
     ordering="NONE"
     side="BOTH"
 [[dependencies.jeiprofessions]]
     modId="minecraft"
     mandatory=true
-    versionRange="[1.15.2]"
+    versionRange="[1.16,1.17)"
     ordering="NONE"
     side="BOTH"
 [[dependencies.jeiprofessions]]
     modId="jei"
     mandatory=true
-    versionRange="[6,)"
+    versionRange="[7,)"
     ordering="AFTER"
     side="BOTH"
